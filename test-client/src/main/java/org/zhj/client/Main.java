@@ -21,15 +21,8 @@ import java.util.concurrent.ExecutorService;
 @Slf4j
 public class Main {
     public static void main(String[] args) {
-//        UserService userService = ProxyUtils.getProxy(UserService.class);
-//        ExecutorService executorService = ThreadPoolUtils.createIoExecutorService("socket-client-io");
-//        for (int i = 0; i < 10; i++) {
-//            executorService.execute(() -> {
-//                User user = userService.getUser(1L);
-//                log.info("获取到响应:{}", user);
-//            });
-//        }
-        RpcClient rpcClient = new NettyRpcClient();
-        rpcClient.sendReq(RpcReq.builder().interfaceName(UserService.class.getName()).methodName("getUser").params(new Object[]{1L}).paramTypes(new Class[]{Long.class}).build());
+        UserService userService = ProxyUtils.getProxy(UserService.class);
+        User user = userService.getUser(1L);
+        System.out.println(user);
     }
 }

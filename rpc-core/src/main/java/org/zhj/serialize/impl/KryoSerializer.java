@@ -37,9 +37,8 @@ public class KryoSerializer implements Serializer {
             KRYO_THREAD_LOCAL.remove();
         }
     }
-
     @Override
-    public Object deserialize(byte[] bytes, Class<?> clazz) {
+    public <T> T deserialize(byte[] bytes, Class<T> clazz) {
         try (ByteArrayInputStream is = new ByteArrayInputStream(bytes);
              Input input = new Input(is)) {
             return KRYO_THREAD_LOCAL.get().readObject(input, clazz);

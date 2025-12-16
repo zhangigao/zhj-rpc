@@ -38,6 +38,13 @@ public class RpcResp<T> implements Serializable {
                 .msg(msg).build();
     }
 
+    public static <T> RpcResp<T> fail(String reqId, String msg) {
+        return RpcResp.<T>builder()
+                .reqId(reqId)
+                .code(RpcRespStatus.FAIL.getCode())
+                .msg(msg).build();
+    }
+
     public static <T> RpcResp<T> fail(String reqId) {
         return RpcResp.<T>builder()
                 .reqId(reqId)

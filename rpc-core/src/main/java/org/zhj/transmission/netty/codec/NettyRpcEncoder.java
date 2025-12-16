@@ -12,7 +12,6 @@ import org.zhj.serialize.impl.KryoSerializer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class NettyRpcEncoder extends MessageToByteEncoder<RpcMsg> {
-    private static final AtomicInteger ID_GEN = new AtomicInteger(0);
 
 
     @Override
@@ -25,10 +24,10 @@ public class NettyRpcEncoder extends MessageToByteEncoder<RpcMsg> {
         byteBuf.writeByte(rpcMsg.getMsgType().getCode());
         byteBuf.writeByte(rpcMsg.getSerializeType().getCode());
         byteBuf.writeByte(rpcMsg.getCompressType().getCode());
-        byteBuf.writeByte(ID_GEN.getAndIncrement());
+        byteBuf.writeInt(rpcMsg.getReqId());
 
         int msgLength = RpcConstant.REQ_HEAD_LEN;
-        if (rpcMsg.getMsgType().isHeartBeat() && rpcMsg.getData() != null) {
+        if (!rpcMsg.getMsgType().isHeartBeat() && rpcMsg.getData() != null) {
             byte[] data = data2Bytes(rpcMsg);
             byteBuf.writeBytes(data);
             msgLength += data.length;

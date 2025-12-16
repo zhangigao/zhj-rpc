@@ -16,14 +16,12 @@ import org.zhj.transmission.socket.server.SocketRpcServer;
 @Slf4j
 public class Main {
     public static void main(String[] args) {
-//        try {
-//            RpcServer rpcServer = new SocketRpcServer(SingletonFactory.getInstance(ZkServiceProvider.class));
-//            rpcServer.publishService(new RpcServiceConfig(new UserServiceImpl()));
-//            rpcServer.start();
-//        } catch (Exception e) {
-//            log.error("server error", e);
-//        }
-        RpcServer rpcServer = new NettyRpcServer();
-        rpcServer.start();
+        try {
+            RpcServer rpcServer = new NettyRpcServer();
+            rpcServer.publishService(new RpcServiceConfig(new UserServiceImpl()));
+            rpcServer.start();
+        } catch (Exception e) {
+            log.error("server error", e);
+        }
     }
 }

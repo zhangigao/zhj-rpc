@@ -5,6 +5,7 @@ import org.zhj.config.RpcServiceConfig;
 import org.zhj.constant.RpcConstant;
 import org.zhj.dto.RpcReq;
 import org.zhj.dto.RpcResp;
+import org.zhj.factory.SingletonFactory;
 import org.zhj.handler.RpcReqHandler;
 import org.zhj.provider.ServiceProvider;
 import org.zhj.provider.impl.SimpleServiceProvider;
@@ -40,7 +41,7 @@ public class SocketRpcServer implements RpcServer {
     }
 
     public SocketRpcServer(int port) {
-        this(port, new SimpleServiceProvider());
+        this(port, SingletonFactory.getInstance(ServiceProvider.class));
     }
 
     public SocketRpcServer(Integer port, ServiceProvider service) {

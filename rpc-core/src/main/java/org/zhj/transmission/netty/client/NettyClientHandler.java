@@ -5,15 +5,20 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 import org.zhj.constant.RpcConstant;
+import org.zhj.dto.RpcMsg;
+import org.zhj.dto.RpcResp;
 
 @Slf4j
-public class NettyClientHandler extends SimpleChannelInboundHandler<String> {
+public class NettyClientHandler extends SimpleChannelInboundHandler<RpcMsg> {
 
     @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext,String str) throws Exception {
-        log.debug("服务端返回结果：{}", str);
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcMsg rpcMsg) throws Exception {
+        log.debug("服务端返回结果：{}", rpcMsg);
+
+        RpcResp<?> resp = (RpcResp<?>) rpcMsg.getData();
+
         AttributeKey<Object> key = AttributeKey.valueOf(RpcConstant.RESPONSE_KET);
-        channelHandlerContext.channel().attr(key).set(str);
+        channelHandlerContext.channel().attr(key).set(resp);
         channelHandlerContext.close();
     }
 
