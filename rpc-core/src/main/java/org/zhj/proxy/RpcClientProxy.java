@@ -2,7 +2,11 @@ package org.zhj.proxy;
 
 import cn.hutool.core.lang.UUID;
 import com.github.rholder.retry.*;
+import lombok.SneakyThrows;
+import org.zhj.annotation.Breaker;
 import org.zhj.annotation.Retry;
+import org.zhj.breaker.CircuitBreaker;
+import org.zhj.breaker.CircuitBreakerManager;
 import org.zhj.config.RpcServiceConfig;
 import org.zhj.dto.RpcReq;
 import org.zhj.dto.RpcResp;
@@ -47,6 +51,26 @@ public class RpcClientProxy implements InvocationHandler {
                 .version(rpcServiceConfig.getVersion())
                 .group(rpcServiceConfig.getGroup())
                 .build();
+        Breaker breaker = method.getAnnotation(Breaker.class);
+        if (Objects.isNull(breaker)) {
+            return sendReqWithRetry(method, rpcReq);
+        }
+        CircuitBreaker circuitBreaker = CircuitBreakerManager.get(rpcReq.getServiceName(), breaker);
+        if (!circuitBreaker.canReq()) {
+            throw new RpcException("服务熔断");
+        }
+        try {
+            Object o = sendReqWithRetry(method, rpcReq);
+            circuitBreaker.success();
+            return o;
+        } catch (Exception e) {
+            circuitBreaker.failure();
+            throw e;
+        }
+    }
+
+    @SneakyThrows
+    private Object sendReqWithRetry(Method method, RpcReq rpcReq) {
         Retry retry = method.getAnnotation(Retry.class);
         if (Objects.isNull(retry)) {
             return sendReq(rpcReq);
