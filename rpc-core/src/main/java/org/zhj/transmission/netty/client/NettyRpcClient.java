@@ -4,11 +4,11 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.string.StringDecoder;
-import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.zhj.constant.RpcConstant;
 import org.zhj.dto.RpcMsg;
@@ -26,14 +26,17 @@ import org.zhj.transmission.netty.codec.NettyRpcDecoder;
 import org.zhj.transmission.netty.codec.NettyRpcEncoder;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public class NettyRpcClient implements RpcClient {
     private static final Bootstrap bootstrap;
     private static final int DEFAULT_CONNECT_TIMEOUT = 5000;
-    private static final AtomicInteger ID_GEN = new AtomicInteger(0);
     private final ServiceDiscovery serviceDiscovery;
+    private final ChannelPool channelPool;
 
 
     public NettyRpcClient() {
@@ -42,6 +45,7 @@ public class NettyRpcClient implements RpcClient {
 
     public NettyRpcClient(ServiceDiscovery serviceDiscovery) {
         this.serviceDiscovery = serviceDiscovery;
+        this.channelPool = SingletonFactory.getInstance(ChannelPool.class);
     }
 
     static {
@@ -54,6 +58,7 @@ public class NettyRpcClient implements RpcClient {
                     @Override
                     protected void initChannel(NioSocketChannel channel) throws Exception {
                         channel.pipeline()
+                                .addLast(new IdleStateHandler(0, 5, 0, TimeUnit.SECONDS))
                                 .addLast(new NettyRpcDecoder())
                                 .addLast(new NettyRpcEncoder())
                                 .addLast(new NettyClientHandler());
@@ -62,19 +67,14 @@ public class NettyRpcClient implements RpcClient {
     }
 
 
+    @SneakyThrows
     @Override
-    public RpcResp<?> sendReq(RpcReq req) {
+    public Future<RpcResp<?>> sendReq(RpcReq req) {
+        CompletableFuture<RpcResp<?>> future = new CompletableFuture<>();
+        UnProcessedReq.put(req.getReqId(), future);
         InetSocketAddress address = serviceDiscovery.lookupService(req);
-        ChannelFuture future = null;
-        try {
-            future = bootstrap.connect(address).sync();
-            log.info("netty rpc connect to {}:{}", address.getHostName(), address.getPort());
-        } catch (InterruptedException e) {
-            log.error("连接服务器异常", e);
-        }
-        Channel channel = future.channel();
+        Channel channel = channelPool.getChannel(address, () -> channel(address));
         RpcMsg rpcMsg = RpcMsg.builder()
-                .reqId(ID_GEN.getAndIncrement())
                 .versionType(VersionType.VERSION1)
                 .serializeType(SerializeType.KRYO)
                 .compressType(CompressType.GZIP)
@@ -83,15 +83,21 @@ public class NettyRpcClient implements RpcClient {
                 .build();
 
         channel.writeAndFlush(rpcMsg)
-                .addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-        // 等待channel关闭
+                .addListener((ChannelFutureListener) listener -> {
+                    if (!listener.isSuccess()) {
+                        future.completeExceptionally(listener.cause());
+                        channel.close();
+                    }
+                });
+        return future;
+    }
+
+    private Channel channel(InetSocketAddress address) {
         try {
-            channel.closeFuture().sync();
+            return bootstrap.connect(address).sync().channel();
         } catch (InterruptedException e) {
-            log.error("客户端发生异常", e);
+            log.error("创建连接失败：{}", address, e);
+            throw new RuntimeException(e);
         }
-        // 获取响应
-        AttributeKey<RpcResp<?>> key = AttributeKey.valueOf(RpcConstant.RESPONSE_KET);
-        return channel.attr(key).get();
     }
 }

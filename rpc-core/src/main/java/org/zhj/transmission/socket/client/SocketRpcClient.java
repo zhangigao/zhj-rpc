@@ -12,6 +12,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 
 /**
  * @Author 86155
@@ -30,14 +32,14 @@ public class SocketRpcClient implements RpcClient {
     }
 
     @Override
-    public RpcResp<?> sendReq(RpcReq req) {
+    public Future<RpcResp<?>> sendReq(RpcReq req) {
         InetSocketAddress address = serviceDiscovery.lookupService(req);
-        try(Socket socket = new Socket(address.getAddress(), address.getPort());) {
+        try (Socket socket = new Socket(address.getAddress(), address.getPort());) {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
             objectOutputStream.writeObject(req);
             objectOutputStream.flush();
             ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream());
-            return (RpcResp<?>) objectInputStream.readObject();
+            return CompletableFuture.completedFuture((RpcResp<?>) objectInputStream.readObject());
         } catch (Exception e) {
             log.error("socket error", e);
         }

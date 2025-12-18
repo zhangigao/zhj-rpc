@@ -1,5 +1,6 @@
 package org.zhj.server.service;
 
+import org.zhj.annotation.Limit;
 import org.zhj.api.UserService;
 import org.zhj.entity.User;
 
@@ -8,6 +9,8 @@ import org.zhj.entity.User;
  * @Date 2025/8/25
  */
 public class UserServiceImpl implements UserService {
+
+    @Limit(permitsPerSecond = 5,timeout = 1000L)
     @Override
     public User getUser(Long id) {
         assert id != null;

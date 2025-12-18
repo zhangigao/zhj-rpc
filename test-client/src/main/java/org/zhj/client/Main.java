@@ -13,6 +13,7 @@ import org.zhj.util.ProxyUtils;
 import org.zhj.util.ThreadPoolUtils;
 
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * @Author 86155
@@ -22,7 +23,12 @@ import java.util.concurrent.ExecutorService;
 public class Main {
     public static void main(String[] args) {
         UserService userService = ProxyUtils.getProxy(UserService.class);
-        User user = userService.getUser(1L);
-        System.out.println(user);
+        ExecutorService executorService = Executors.newFixedThreadPool(20);
+        for (int i = 0; i < 20; i++) {
+            executorService.execute(() -> {
+                User user = userService.getUser(1L);
+                System.out.println(user);
+            });
+        }
     }
 }

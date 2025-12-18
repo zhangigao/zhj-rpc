@@ -10,6 +10,7 @@ import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.zhj.config.RpcServiceConfig;
 import org.zhj.constant.RpcConstant;
@@ -20,6 +21,8 @@ import org.zhj.transmission.RpcServer;
 import org.zhj.transmission.netty.codec.NettyRpcDecoder;
 import org.zhj.transmission.netty.codec.NettyRpcEncoder;
 import org.zhj.util.ShutdownHookUtils;
+
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class NettyRpcServer implements RpcServer {
@@ -56,6 +59,7 @@ public class NettyRpcServer implements RpcServer {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) {
                         socketChannel.pipeline()
+                                .addLast(new IdleStateHandler(30, 0, 0, TimeUnit.SECONDS))
                                 .addLast(new NettyRpcDecoder())
                                 .addLast(new NettyRpcEncoder())
                                 .addLast(new NettyServerHandler(serviceProvider));
